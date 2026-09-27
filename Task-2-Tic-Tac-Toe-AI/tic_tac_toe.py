@@ -1,412 +1,221 @@
-# ============================================================
-# CODSOFT - AI INTERNSHIP
-# Task 2: Tic-Tac-Toe AI
-# AI Agent: Minimax with Alpha-Beta Pruning
-# ============================================================
-
-import math
+import tkinter as tk
+from tkinter import messagebox
 
 
-# ------------------------------------------------------------
-# Game Configuration
-# ------------------------------------------------------------
+class TicTacToeAI:
+    def __init__(self):
+        self.window = tk.Tk()
+        self.window.title("Tic-Tac-Toe AI")
+        self.window.resizable(False, False)
 
-HUMAN = "X"
-AI = "O"
+        self.board = [""] * 9
+        self.human = "X"
+        self.ai = "O"
+        self.game_over = False
 
-board = [" " for _ in range(9)]
+        self.create_interface()
 
+    def create_interface(self):
+        title = tk.Label(
+            self.window,
+            text="TIC-TAC-TOE AI",
+            font=("Arial", 22, "bold")
+        )
+        title.pack(pady=(15, 5))
 
-# ------------------------------------------------------------
-# Winning Combinations
-# ------------------------------------------------------------
+        self.status_label = tk.Label(
+            self.window,
+            text="Your Turn - You are X",
+            font=("Arial", 12)
+        )
+        self.status_label.pack(pady=5)
 
-winning_combinations = [
-    (0, 1, 2),
-    (3, 4, 5),
-    (6, 7, 8),
-    (0, 3, 6),
-    (1, 4, 7),
-    (2, 5, 8),
-    (0, 4, 8),
-    (2, 4, 6)
-]
+        board_frame = tk.Frame(self.window)
+        board_frame.pack(padx=15, pady=10)
 
+        self.buttons = []
 
-# ------------------------------------------------------------
-# Display Board
-# ------------------------------------------------------------
+        for i in range(9):
+            button = tk.Button(
+                board_frame,
+                text="",
+                font=("Arial", 24, "bold"),
+                width=4,
+                height=2,
+                command=lambda index=i: self.human_move(index)
+            )
+            button.grid(
+                row=i // 3,
+                column=i % 3,
+                padx=2,
+                pady=2
+            )
+            self.buttons.append(button)
 
-def print_board():
-    print()
-    print("     |     |     ")
-    print(f"  {board[0]}  |  {board[1]}  |  {board[2]}  ")
-    print("_____|_____|_____")
-    print("     |     |     ")
-    print(f"  {board[3]}  |  {board[4]}  |  {board[5]}  ")
-    print("_____|_____|_____")
-    print("     |     |     ")
-    print(f"  {board[6]}  |  {board[7]}  |  {board[8]}  ")
-    print("     |     |     ")
-    print()
+        reset_button = tk.Button(
+            self.window,
+            text="New Game",
+            font=("Arial", 12, "bold"),
+            command=self.reset_game
+        )
+        reset_button.pack(pady=(5, 15))
 
+    def human_move(self, position):
+        if self.game_over or self.board[position] != "":
+            return
 
-# ------------------------------------------------------------
-# Position Guide
-# ------------------------------------------------------------
+        self.board[position] = self.human
+        self.buttons[position].config(text=self.human)
 
-def print_position_guide():
-    print("\nPosition Guide:")
-    print()
-    print("     |     |     ")
-    print("  1  |  2  |  3  ")
-    print("_____|_____|_____")
-    print("     |     |     ")
-    print("  4  |  5  |  6  ")
-    print("_____|_____|_____")
-    print("     |     |     ")
-    print("  7  |  8  |  9  ")
-    print("     |     |     ")
-    print()
+        if self.check_winner(self.board, self.human):
+            self.end_game("You Win!")
+            return
 
+        if self.is_board_full(self.board):
+            self.end_game("It's a Draw!")
+            return
 
-# ------------------------------------------------------------
-# Check Winner
-# ------------------------------------------------------------
+        self.status_label.config(text="AI is thinking...")
+        self.window.after(300, self.ai_move)
 
-def check_winner():
+    def ai_move(self):
+        if self.game_over:
+            return
 
-    for a, b, c in winning_combinations:
+        best_score = float("-inf")
+        best_move = None
 
-        if (
-            board[a] == board[b]
-            and board[b] == board[c]
-            and board[a] != " "
-        ):
-            return board[a]
+        for position in range(9):
+            if self.board[position] == "":
+                self.board[position] = self.ai
 
-    if " " not in board:
-        return "draw"
-
-    return None
-
-
-# ------------------------------------------------------------
-# Get Available Moves
-# ------------------------------------------------------------
-
-def get_available_moves():
-
-    return [
-        index
-        for index in range(9)
-        if board[index] == " "
-    ]
-
-
-# ------------------------------------------------------------
-# Human Move
-# ------------------------------------------------------------
-
-def human_move():
-
-    while True:
-
-        try:
-
-            position = int(
-                input("Enter your move (1-9): ")
-            ) - 1
-
-            if position < 0 or position > 8:
-
-                print(
-                    "Please enter a number between 1 and 9."
+                score = self.minimax(
+                    self.board,
+                    0,
+                    False,
+                    float("-inf"),
+                    float("inf")
                 )
 
-                continue
+                self.board[position] = ""
 
-            if board[position] != " ":
+                if score > best_score:
+                    best_score = score
+                    best_move = position
 
-                print(
-                    "That position is already occupied."
-                )
+        if best_move is not None:
+            self.board[best_move] = self.ai
+            self.buttons[best_move].config(text=self.ai)
 
-                continue
+        if self.check_winner(self.board, self.ai):
+            self.end_game("AI Wins!")
+            return
 
-            board[position] = HUMAN
+        if self.is_board_full(self.board):
+            self.end_game("It's a Draw!")
+            return
 
-            break
+        self.status_label.config(text="Your Turn - You are X")
 
-        except ValueError:
+    def minimax(self, board, depth, maximizing, alpha, beta):
+        if self.check_winner(board, self.ai):
+            return 10 - depth
 
-            print(
-                "Invalid input. Please enter a number between 1 and 9."
-            )
+        if self.check_winner(board, self.human):
+            return depth - 10
 
+        if self.is_board_full(board):
+            return 0
 
-# ------------------------------------------------------------
-# Minimax with Alpha-Beta Pruning
-# ------------------------------------------------------------
+        if maximizing:
+            best_score = float("-inf")
 
-def minimax(is_maximizing, alpha, beta):
+            for position in range(9):
+                if board[position] == "":
+                    board[position] = self.ai
 
-    result = check_winner()
+                    score = self.minimax(
+                        board,
+                        depth + 1,
+                        False,
+                        alpha,
+                        beta
+                    )
 
-    # AI wins
-    if result == AI:
-        return 1
+                    board[position] = ""
 
-    # Human wins
-    if result == HUMAN:
-        return -1
+                    best_score = max(best_score, score)
+                    alpha = max(alpha, best_score)
 
-    # Draw
-    if result == "draw":
-        return 0
+                    if beta <= alpha:
+                        break
 
-    # --------------------------------------------------------
-    # Maximizing Player - AI
-    # --------------------------------------------------------
+            return best_score
 
-    if is_maximizing:
+        else:
+            best_score = float("inf")
 
-        best_score = -math.inf
+            for position in range(9):
+                if board[position] == "":
+                    board[position] = self.human
 
-        for move in get_available_moves():
+                    score = self.minimax(
+                        board,
+                        depth + 1,
+                        True,
+                        alpha,
+                        beta
+                    )
 
-            board[move] = AI
+                    board[position] = ""
 
-            score = minimax(
-                False,
-                alpha,
-                beta
-            )
+                    best_score = min(best_score, score)
+                    beta = min(beta, best_score)
 
-            board[move] = " "
+                    if beta <= alpha:
+                        break
 
-            best_score = max(
-                best_score,
-                score
-            )
+            return best_score
 
-            alpha = max(
-                alpha,
-                best_score
-            )
+    def check_winner(self, board, player):
+        winning_combinations = [
+            (0, 1, 2),
+            (3, 4, 5),
+            (6, 7, 8),
+            (0, 3, 6),
+            (1, 4, 7),
+            (2, 5, 8),
+            (0, 4, 8),
+            (2, 4, 6)
+        ]
 
-            # Alpha-Beta Pruning
-            if beta <= alpha:
-                break
+        for a, b, c in winning_combinations:
+            if board[a] == player and board[b] == player and board[c] == player:
+                return True
 
-        return best_score
+        return False
 
-    # --------------------------------------------------------
-    # Minimizing Player - Human
-    # --------------------------------------------------------
+    def is_board_full(self, board):
+        return all(cell != "" for cell in board)
 
-    else:
+    def end_game(self, message):
+        self.game_over = True
+        self.status_label.config(text=message)
+        messagebox.showinfo("Game Over", message)
 
-        best_score = math.inf
+    def reset_game(self):
+        self.board = [""] * 9
+        self.game_over = False
 
-        for move in get_available_moves():
+        for button in self.buttons:
+            button.config(text="")
 
-            board[move] = HUMAN
+        self.status_label.config(text="Your Turn - You are X")
 
-            score = minimax(
-                True,
-                alpha,
-                beta
-            )
+    def run(self):
+        self.window.mainloop()
 
-            board[move] = " "
-
-            best_score = min(
-                best_score,
-                score
-            )
-
-            beta = min(
-                beta,
-                best_score
-            )
-
-            # Alpha-Beta Pruning
-            if beta <= alpha:
-                break
-
-        return best_score
-
-
-# ------------------------------------------------------------
-# Find Best Move for AI
-# ------------------------------------------------------------
-
-def get_best_move():
-
-    best_score = -math.inf
-    best_move = None
-
-    for move in get_available_moves():
-
-        board[move] = AI
-
-        score = minimax(
-            False,
-            -math.inf,
-            math.inf
-        )
-
-        board[move] = " "
-
-        if score > best_score:
-
-            best_score = score
-            best_move = move
-
-    return best_move
-
-
-# ------------------------------------------------------------
-# AI Move
-# ------------------------------------------------------------
-
-def ai_move():
-
-    print("🤖 AI is thinking...")
-
-    move = get_best_move()
-
-    if move is not None:
-
-        board[move] = AI
-
-        print(
-            f"🤖 AI selected position {move + 1}."
-        )
-
-
-# ------------------------------------------------------------
-# Instructions
-# ------------------------------------------------------------
-
-def print_instructions():
-
-    print("\n" + "=" * 55)
-    print("             TIC-TAC-TOE AI")
-    print("=" * 55)
-
-    print("\nYou are: X")
-    print("AI is:   O")
-
-    print(
-        "\nThe AI uses Minimax with Alpha-Beta Pruning."
-    )
-
-    print(
-        "Try to defeat the AI!"
-    )
-
-    print_position_guide()
-
-
-# ------------------------------------------------------------
-# Play Game
-# ------------------------------------------------------------
-
-def play_game():
-
-    global board
-
-    board = [" " for _ in range(9)]
-
-    print_instructions()
-
-    while True:
-
-        # ----------------------------------------------------
-        # Human Turn
-        # ----------------------------------------------------
-
-        print("Your turn.")
-
-        print_board()
-
-        human_move()
-
-        print_board()
-
-        result = check_winner()
-
-        if result == HUMAN:
-
-            print("🎉 Congratulations! You won!")
-
-            break
-
-        if result == "draw":
-
-            print("🤝 It's a draw!")
-
-            break
-
-        # ----------------------------------------------------
-        # AI Turn
-        # ----------------------------------------------------
-
-        ai_move()
-
-        print_board()
-
-        result = check_winner()
-
-        if result == AI:
-
-            print(
-                "🤖 AI wins! Better luck next time."
-            )
-
-            break
-
-        if result == "draw":
-
-            print("🤝 It's a draw!")
-
-            break
-
-
-# ------------------------------------------------------------
-# Main Program
-# ------------------------------------------------------------
-
-def main():
-
-    while True:
-
-        play_game()
-
-        print("\n" + "=" * 55)
-
-        choice = input(
-            "Do you want to play again? (y/n): "
-        ).strip().lower()
-
-        if choice != "y":
-
-            print(
-                "\nThank you for playing Tic-Tac-Toe AI!"
-            )
-
-            print(
-                "Good luck with your CodSoft internship!"
-            )
-
-            break
-
-
-# ------------------------------------------------------------
-# Program Entry Point
-# ------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    game = TicTacToeAI()
+    game.run()
