@@ -1,0 +1,6 @@
+@"
+__pycache__/
+*.pyc
+*.bin
+*.safetensors
+"@ | Set-Content .\Task-3-Image-Captioning\.gitignore
